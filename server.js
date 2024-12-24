@@ -7,12 +7,13 @@ const app = express();
 const PORT = 3001;
 
 // Настройка MinIO
+
 const minioClient = new Client({
-  endPoint: "localhost",
-  port: 9000,
+  endPoint: process.env.MINIO_ENDPOINT || "minio", // Используем значение minio
+  port: process.env.MINIO_PORT || 9000, // Используем значение порта 9000
   useSSL: false,
-  accessKey: "minioadmin",
-  secretKey: "minioadmin",
+  accessKey: process.env.MINIO_ACCESS_KEY || "minioadmin", // Используем стандартные ключи
+  secretKey: process.env.MINIO_SECRET_KEY || "minioadmin", // Используем стандартные ключи
 });
 
 // Обслуживание статических файлов
