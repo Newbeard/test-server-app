@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Download Large File</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+      background-color: #f4f4f9;
+    }
+
+    h1 {
+      color: #333;
+      margin-bottom: 20px;
+    }
+
+    button {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    button:active {
+      background-color: #003f7f;
+    }
+
+    .progress-container {
+      width: 80%;
+      height: 20px;
+      background-color: #ddd;
+      border-radius: 10px;
+      margin-top: 20px;
+      overflow: hidden;
+    }
+
+    .progress-bar {
+      width: 0%;
+      height: 100%;
+      background-color: #007bff;
+      transition: width 0.1s linear;
+    }
+
+    .progress-text {
+      margin-top: 10px;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Download Large File</h1>
+  <button id="download-button">Download 300 MB File</button>
+  <div class="progress-container">
+    <div id="progress-bar" class="progress-bar"></div>
+  </div>
+  <div id="progress-text" class="progress-text"></div>
+
+  <script>
+    const downloadFile = async () => {
+      try {
+        const button = document.getElementById("download-button");
+        const progressBar = document.getElementById("progress-bar");
+        const progressText = document.getElementById("progress-text");
+
+        button.textContent = "Downloading...";
+        button.disabled = true;
+
+        // Проверка поддержки File System Access API
+        if (!window.showSaveFilePicker) {
+          alert("Your browser does not support the File System Access API.");
+          button.textContent = "Download 300 MB File";
+          button.disabled = false;
+          return;
+        }
+
+        const response = await fetch("/api/download-file", {
+          cache: "no-store",
+        });
+
+        if (!response.ok) throw new Error("Failed to download file");
+
+        const contentLength = response.headers.get("Content-Length");
+        if (!contentLength) throw new Error("Content-Length header is missing");
+
+        const total = parseInt(contentLength, 10);
+        let received = 0;
+
+        // Выбор места сохранения файла
+        const fileHandle = await window.showSaveFilePicker({
+          suggestedName: "large-file.txt",
+          types: [
+            {
+              description: "Text Files",
+              accept: { "text/plain": [".txt"] },
+            },
+          ],
+        });
+
+        const writableStream = await fileHandle.createWritable();
+
+        const reader = response.body.getReader();
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          received += value.length;
+
+          // Обновление прогресс-бара
+          const progress = Math.round((received / total) * 100);
+          progressBar.style.width = `${progress}%`;
+          progressText.textContent = `Downloaded ${progress}% (${(received / 1024 / 1024).toFixed(
+            2
+          )} MB of ${(total / 1024 / 1024).toFixed(2)} MB)`;
+
+          await writableStream.write(value);
+        }
+
+        await writableStream.close();
+
+        progressBar.style.width = `100%`;
+        progressText.textContent = "Download completed!";
+        button.textContent = "Download 300 MB File";
+        button.disabled = false;
+      } catch (error) {
+        console.error("Error downloading file:", error);
+        alert("Error downloading file");
+        const button = document.getElementById("download-button");
+        button.textContent = "Download 300 MB File";
+        button.disabled = false;
+      }
+    };
+
+    document.getElementById("download-button").addEventListener("click", downloadFile);
+  </script>
+</body>
+</html>
